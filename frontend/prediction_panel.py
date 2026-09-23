@@ -24,7 +24,7 @@ def render_prediction_panel(backend_url: str, evaluation: dict) -> None:
         st.session_state["interactive_run"] = run_id
         st.session_state.pop("new_prediction", None)
         st.session_state.pop("model_explanation", None)
-    st.caption(f"Using retained model: {evaluation['model']}. Backend runs expire after one hour or when the backend restarts.")
+    st.caption(f"Using retained model: {evaluation['model']}. Runs expire after one hour, server restart, or eviction when the demo is busy.")
     with st.form("new_sensor_inputs"):
         values = {}
         columns = st.columns(2)

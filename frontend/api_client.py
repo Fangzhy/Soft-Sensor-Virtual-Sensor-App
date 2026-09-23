@@ -1,14 +1,22 @@
-"""Keep HTTP communication separate from the Streamlit display code."""
+"""Keep service communication and response checks separate from display code."""
 
 import requests
 
 import math
+
+from frontend.execution import request
 
 # This is the public data contract, not an import of backend implementation.
 DATA_COLUMNS = (
     "temperature_c", "density_kg_m3", "flow_rate_l_min", "pressure_bar",
     "agitation_rpm", "solid_concentration_pct",
 )
+
+
+def check_busy(response) -> None:
+    """Explain cloud capacity limits without exposing server exceptions."""
+    if response.status_code == 429:
+        raise BackendError("Another visitor is training a model. Please retry shortly.")
 
 
 class BackendError(Exception):
@@ -23,8 +31,9 @@ def fetch_health(base_url: str) -> dict:
     """
     url = f"{base_url.rstrip('/')}/health"
     try:
-        response = requests.get(url, timeout=5)
+        response = request("get", url, timeout=5)
         # An HTTP response can arrive successfully but still contain a 404/500.
+        check_busy(response)
         response.raise_for_status()
     except requests.Timeout as exc:
         raise BackendError("The backend took too long to respond. Try again.") from exc
@@ -59,16 +68,17 @@ def fetch_health(base_url: str) -> dict:
 def fetch_training(base_url: str, rows: list[dict], test_fraction: float, split_seed: int) -> dict:
     """Submit the current dataset and validate evaluation artifacts for the UI."""
     try:
-        response = requests.post(
+        response = request("post",
             f"{base_url.rstrip('/')}/models/train",
             json={"rows": rows, "test_fraction": test_fraction, "split_seed": split_seed},
             timeout=60,
         )
         if response.status_code == 422:
             raise BackendError("Training settings or dataset are invalid. Regenerate data and try again.")
+        check_busy(response)
         response.raise_for_status()
     except requests.RequestException as exc:
-        raise BackendError("Training failed. Check the FastAPI terminal and try again.") from exc
+        raise BackendError("Training failed. Check the server logs and try again.") from exc
     try:
         result = response.json()
         validate_evaluation(result, rows, test_fraction, split_seed, "Linear Regression")
@@ -118,18 +128,19 @@ MODEL_NAMES = ["Linear Regression", "Random Forest", "XGBoost", "Neural Network"
 
 
 def fetch_run_action(base_url: str, action: str, run_id: str, inputs: dict | None = None) -> dict:
-    """Call an existing run without ever passing an LLM key through Streamlit."""
+    """Call an existing run; credentials remain in server-side configuration."""
     if action not in ("predict", "explain"):
         raise BackendError("Unsupported model action.")
     body = {"run_id": run_id}
     if inputs is not None:
         body["inputs"] = inputs
     try:
-        response = requests.post(f"{base_url.rstrip('/')}/models/{action}", json=body, timeout=(5, 90))
+        response = request("post", f"{base_url.rstrip('/')}/models/{action}", json=body, timeout=(5, 90))
         if response.status_code == 404:
             raise BackendError("This model run expired or the backend restarted. Train or compare again.")
         if response.status_code == 422:
             raise BackendError("Invalid sensor inputs or model run. Check the values and retrain if needed.")
+        check_busy(response)
         response.raise_for_status()
         data = response.json()
         require(data["run_id"] == run_id)
@@ -163,7 +174,7 @@ def fetch_run_action(base_url: str, action: str, run_id: str, inputs: dict | Non
 def fetch_comparison(base_url: str, rows: list[dict], test_fraction: float, split_seed: int, models: list[str], include_diagnostics: bool = False) -> dict:
     """Run one comparison request; retain readable failures for the UI."""
     try:
-        response = requests.post(
+        response = request("post",
             f"{base_url.rstrip('/')}/models/compare",
             json={"rows": rows, "test_fraction": test_fraction, "split_seed": split_seed, "models": models,
                   "include_diagnostics": include_diagnostics},
@@ -171,9 +182,10 @@ def fetch_comparison(base_url: str, rows: list[dict], test_fraction: float, spli
         )
         if response.status_code == 422:
             raise BackendError("Invalid comparison settings. Select at least one supported model.")
+        check_busy(response)
         response.raise_for_status()
     except requests.RequestException as exc:
-        raise BackendError("Model comparison failed or timed out. Check FastAPI and try fewer models or rows.") from exc
+        raise BackendError("Model comparison failed or timed out. Check the server logs and try fewer models or rows.") from exc
     try:
         result = response.json()
         require(result["cv_folds"] == 5 and result["selection_metric"] == "mean CV RMSE")
@@ -241,15 +253,16 @@ def fetch_dataset(base_url: str, n_samples: int, seed: int, noise_std: float) ->
     """Request synthetic observations and reject malformed data before plotting."""
     settings = {"n_samples": n_samples, "seed": seed, "noise_std": noise_std}
     try:
-        response = requests.post(
+        response = request("post",
             f"{base_url.rstrip('/')}/data/generate", json=settings, timeout=30,
         )
         if response.status_code == 422:
             raise BackendError("Invalid settings: use 100–5000 rows, a valid seed, and noise from 0–5.")
+        check_busy(response)
         response.raise_for_status()
     except requests.RequestException as exc:
         raise BackendError(
-            "Could not generate data. Check that FastAPI is running, then try again."
+            "Could not generate data. Check the server logs and execution settings, then try again."
         ) from exc
     try:
         data = response.json()

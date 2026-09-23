@@ -1,0 +1,11 @@
+# A consistent, high-contrast theme for the local portfolio demo.
+[theme]
+base = "light"
+primaryColor = "#087F8C"
+backgroundColor = "#F7FAFC"
+secondaryBackgroundColor = "#E8F0F5"
+textColor = "#142D40"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false
