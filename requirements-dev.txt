@@ -1,0 +1,4 @@
+# Include runtime dependencies, then add the API/UI testing tools.
+-r requirements.txt
+pytest>=8.0,<9.0
+httpx>=0.27,<1.0
