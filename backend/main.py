@@ -9,6 +9,10 @@ from typing import Literal
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from backend.schemas import DatasetResponse, GenerationRequest, TrainingRequest, TrainingResponse
+from backend.services.modeling import train_linear_regression
+from backend.services.synthetic_data import generate_dataset
+
 
 class HealthResponse(BaseModel):
     """Describe the JSON contract that the frontend can expect from this API."""
@@ -36,3 +40,20 @@ def health_check() -> HealthResponse:
     against HealthResponse. Later stages will add separate model endpoints.
     """
     return HealthResponse()
+
+
+@app.post("/data/generate", response_model=DatasetResponse, tags=["Data"])
+def create_dataset(settings: GenerationRequest) -> DatasetResponse:
+    """Validate JSON settings and return a fresh synthetic dataset.
+
+    FastAPI returns 422 for invalid inputs before calling this function. The
+    service owns the numerical recipe; this route only connects it to HTTP.
+    Datasets are returned to the caller, not stored globally on the server.
+    """
+    return generate_dataset(settings)
+
+
+@app.post("/models/train", response_model=TrainingResponse, tags=["Models"])
+def train_model(request: TrainingRequest) -> TrainingResponse:
+    """Evaluate Linear Regression on the submitted dataset's held-out rows."""
+    return train_linear_regression(request)

@@ -9,17 +9,19 @@ import os
 import streamlit as st
 
 from frontend.api_client import BackendError, fetch_health
+from frontend.data_explorer import render_data_explorer
+from frontend.model_trainer import render_model_trainer
 
 
 def main() -> None:
     """Render the learning dashboard and handle an explicit connection check."""
-    st.set_page_config(page_title="Sensor Fusion | Stage 1", page_icon="🔬", layout="wide")
+    st.set_page_config(page_title="Sensor Fusion | Stage 3", page_icon="🔬", layout="wide")
 
     # Read configuration from the process environment; no API key is needed yet.
     backend_url = os.getenv("BACKEND_URL", "http://127.0.0.1:8000").strip().rstrip("/")
     with st.sidebar:
         st.title("Sensor Fusion")
-        st.caption("Stage 1 of 7 · App foundation")
+        st.caption("Stage 3 of 7 · Linear Regression")
         st.markdown("**Prediction target**\n\nSolid concentration (%)")
         st.divider()
         st.caption("Backend URL")
@@ -30,12 +32,12 @@ def main() -> None:
     st.caption("SensorData-FusionPredtionExplaination")
     st.write(
         "Learn how process measurements can be combined to estimate solid "
-        "concentration. This first stage connects the interface to the API."
+        "concentration. Generate synthetic observations and explore their relationships."
     )
 
     sensors, target = st.columns([2, 1])
     with sensors:
-        st.subheader("Planned sensor inputs")
+        st.subheader("Sensor inputs")
         st.table([
             {"Measurement": "Temperature", "Unit": "°C"},
             {"Measurement": "Density", "Unit": "kg/m³"},
@@ -46,7 +48,7 @@ def main() -> None:
     with target:
         st.subheader("Prediction target")
         st.markdown("### Solid concentration (%)")
-        st.info("Data generation starts in Stage 2. No model has been trained yet.")
+        st.info("Target: mass percent (w/w). Train a linear model and evaluate held-out predictions below.")
 
     st.divider()
     st.subheader("Check the backend connection")
@@ -75,6 +77,11 @@ def main() -> None:
             "4. Streamlit displays the result or a helpful connection error."
         )
         st.caption("Your browser talks to Streamlit; the Streamlit server talks to FastAPI.")
+
+    st.divider()
+    render_data_explorer(backend_url)
+    st.divider()
+    render_model_trainer(backend_url)
 
 
 if __name__ == "__main__":

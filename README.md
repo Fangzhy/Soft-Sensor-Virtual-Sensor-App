@@ -4,12 +4,16 @@ A step-by-step learning project using **FastAPI** for the backend and
 **Streamlit** for the frontend. The prediction target is **solid concentration
 (%)**, using temperature, density, flow rate, pressure, and agitation speed.
 
-## Current milestone: Stage 1
+## Current milestone: Stage 3
 
-The app has a health endpoint, interactive API documentation, and a Streamlit
-page that checks the backend connection and displays its JSON response.
-Data generation, model training, predictions, and AI explanations are future
-stages. No company data or API key is required.
+The app generates reproducible synthetic sensor data through FastAPI and
+explores it in Streamlit. Choose 100–5000 rows, a random seed, and target noise;
+inspect summaries, histograms, scatter plots, and correlations; download all
+rows as CSV. Solid concentration is mass percent (w/w).
+Train Linear Regression on the displayed data and inspect held-out R², RMSE,
+MAE, actual-versus-predicted and residual plots, plus a training-mean baseline.
+The Stage 1 health check is still available. Additional models, predictions for
+new inputs, and AI explanations are future stages. No company data or API key is required.
 
 ## Setup (Windows PowerShell)
 
@@ -69,6 +73,17 @@ You should see a success message and this response:
 Press **Ctrl+C** in each terminal to stop that server. The connection result
 reflects the last button click; the app does not continuously monitor the API.
 
+For Stage 2, scroll to **Explore synthetic sensor data** and click **Generate
+synthetic data**. Changing chart controls keeps the current data. Click Generate
+again to apply new settings. See the [Stage 2 walkthrough](docs/stage-2.md) for
+the exact data recipe, assumptions, and exercises.
+
+For Stage 3, scroll to **Train and evaluate Linear Regression** after generating
+data, then click **Train Linear Regression**. The default split is 80% training
+and 20% test. See the [Stage 3 walkthrough](docs/stage-3.md) for metrics and
+leakage prevention. Install updated dependencies and restart servers when
+moving from Stage 2.
+
 ### Optional backend address
 
 If you run FastAPI on a different port, set the matching URL in the frontend
@@ -94,6 +109,15 @@ This stage reads the process environment directly; it does not load `.env` files
 | `requirements-dev.txt` | Runtime libraries plus test dependencies. |
 | `tests/test_stage1.py` | API contract and UI connection/recovery checks. |
 | `docs/stage-1.md` | Guided explanation and a hands-on exercise. |
+| `backend/schemas.py` | Dataset request validation and response structure. |
+| `backend/services/synthetic_data.py` | Reproducible synthetic process recipe. |
+| `frontend/data_explorer.py` | Generation form, session state, charts, and CSV export. |
+| `tests/test_stage2.py` | Reproducibility, validation, ranges, and UI lifecycle checks. |
+| `docs/stage-2.md` | Data assumptions, equation, and exploration exercises. |
+| `backend/services/modeling.py` | Train-only preprocessing, linear fitting, and held-out metrics. |
+| `frontend/model_trainer.py` | Training form and evaluation plots. |
+| `tests/test_stage3.py` | Metric correctness, leakage checks, validation, and UI lifecycle. |
+| `docs/stage-3.md` | Linear Regression, split strategy, metrics, and exercises. |
 
 The dependency ranges allow compatible updates; they are not an exact lockfile.
 The existing `.gitignore` excludes the virtual environment and local secrets.
@@ -120,12 +144,13 @@ required. Try the two-terminal workflow above to verify the actual HTTP link.
 
 ## Learning roadmap
 
-1. App foundation (this milestone).
-2. Reproducible synthetic sensor data and exploration.
-3. Linear Regression and evaluation charts.
+1. App foundation (complete).
+2. Reproducible synthetic sensor data and exploration (complete).
+3. Linear Regression and evaluation charts (this milestone).
 4. Random Forest, XGBoost, neural network, and cross-validation.
 5. Feature importance, residual diagnostics, and prediction intervals.
 6. Interactive prediction and evidence-based AI explanations.
 7. Portfolio polish, exports, and final validation.
 
 Continue with the [Stage 1 walkthrough](docs/stage-1.md).
+Then work through the [Stage 2 walkthrough](docs/stage-2.md).

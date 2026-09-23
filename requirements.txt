@@ -4,3 +4,9 @@ pydantic>=2.0,<3.0
 uvicorn>=0.37.0,<1.0
 streamlit>=1.45.0,<2.0
 requests>=2.32.3,<3.0
+# Stage 2: numerical generation, tabular exploration, and interactive charts.
+numpy>=1.26,<3.0
+pandas>=2.2,<4.0
+plotly>=6.0,<7.0
+# Stage 3: preprocessing, splitting, Linear Regression, and evaluation.
+scikit-learn>=1.5,<2.0
