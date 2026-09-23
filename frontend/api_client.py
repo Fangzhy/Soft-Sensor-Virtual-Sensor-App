@@ -58,11 +58,6 @@ def fetch_health(base_url: str) -> dict:
 
 def fetch_training(base_url: str, rows: list[dict], test_fraction: float, split_seed: int) -> dict:
     """Submit the current dataset and validate evaluation artifacts for the UI."""
-    def require(condition: bool) -> None:
-        """Validate even when Python runs with assertions disabled (-O)."""
-        if not condition:
-            raise ValueError("Unexpected training response")
-
     try:
         response = requests.post(
             f"{base_url.rstrip('/')}/models/train",
@@ -76,11 +71,26 @@ def fetch_training(base_url: str, rows: list[dict], test_fraction: float, split_
         raise BackendError("Training failed. Check the FastAPI terminal and try again.") from exc
     try:
         result = response.json()
+        validate_evaluation(result, rows, test_fraction, split_seed, "Linear Regression")
+    except (ValueError, KeyError, TypeError) as exc:
+        raise BackendError("The training response does not match the expected evaluation contract.") from exc
+    return result
+
+
+def require(condition: bool) -> None:
+    """Check HTTP contracts even when Python assertions are disabled."""
+    if not condition:
+        raise ValueError("Unexpected response contract")
+
+
+def validate_evaluation(result: dict, rows: list[dict], test_fraction: float, split_seed: int, model: str, calibration_count: int = 0) -> None:
+    """Validate shared held-out artifacts for training and model comparison."""
+    try:
         expected_test = math.ceil(len(rows) * test_fraction)
-        require(result["model"] == "Linear Regression")
+        require(result["model"] == model)
         require(result["split_seed"] == split_seed and result["test_fraction"] == test_fraction)
         require(result["test_count"] == expected_test)
-        require(result["train_count"] == len(rows) - expected_test)
+        require(result["train_count"] == len(rows) - expected_test - calibration_count)
         for name in ("train_metrics", "test_metrics", "baseline_test_metrics"):
             scores = result[name]
             for metric in ("r2", "rmse", "mae"):
@@ -102,7 +112,86 @@ def fetch_training(base_url: str, rows: list[dict], test_fraction: float, split_
             require(math.isclose(row["residual"], row["actual"] - row["predicted"], abs_tol=1e-9))
     except (ValueError, KeyError, TypeError) as exc:
         raise BackendError("The training response does not match the expected evaluation contract.") from exc
+
+
+MODEL_NAMES = ["Linear Regression", "Random Forest", "XGBoost", "Neural Network"]
+
+
+def fetch_comparison(base_url: str, rows: list[dict], test_fraction: float, split_seed: int, models: list[str], include_diagnostics: bool = False) -> dict:
+    """Run one comparison request; retain readable failures for the UI."""
+    try:
+        response = requests.post(
+            f"{base_url.rstrip('/')}/models/compare",
+            json={"rows": rows, "test_fraction": test_fraction, "split_seed": split_seed, "models": models,
+                  "include_diagnostics": include_diagnostics},
+            timeout=180,
+        )
+        if response.status_code == 422:
+            raise BackendError("Invalid comparison settings. Select at least one supported model.")
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise BackendError("Model comparison failed or timed out. Check FastAPI and try fewer models or rows.") from exc
+    try:
+        result = response.json()
+        require(result["cv_folds"] == 5 and result["selection_metric"] == "mean CV RMSE")
+        require([item["model"] for item in result["results"]] == list(dict.fromkeys(models)))
+        for item in result["results"]:
+            require(len(item["folds"]) == 5)
+            for scores in [*item["folds"], item["mean"], item["std"]]:
+                for metric in ("r2", "rmse", "mae"):
+                    value = scores[metric]
+                    if metric == "r2" and value is None:
+                        continue
+                    require(type(value) in (int, float) and math.isfinite(value))
+                    require(metric == "r2" or value >= 0)
+            require(isinstance(item["warnings"], list) and all(isinstance(w, str) for w in item["warnings"]))
+        winner = min(result["results"], key=lambda item: item["mean"]["rmse"])["model"]
+        require(result["selected_model"] == winner)
+        require(isinstance(result["warnings"], list) and all(isinstance(w, str) for w in result["warnings"]))
+        calibration_count = math.ceil(len(rows) * 0.2) if include_diagnostics else 0
+        validate_evaluation(result["evaluation"], rows, test_fraction, split_seed, winner, calibration_count)
+        if include_diagnostics:
+            validate_diagnostics(result["diagnostics"], result["evaluation"], calibration_count)
+        else:
+            require(result.get("diagnostics") is None)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise BackendError("The comparison response does not match the expected contract.") from exc
     return result
+
+
+def validate_diagnostics(data: dict, evaluation: dict, calibration_count: int) -> None:
+    """Validate finite diagnostic numbers and interval alignment before plotting."""
+    def finite(value):
+        return type(value) in (int, float) and math.isfinite(value)
+
+    require(data["calibration_count"] == calibration_count and data["nominal_coverage"] == 0.9)
+    require(data["quantile_rank"] == math.ceil((calibration_count + 1) * 0.9))
+    for name in ("half_width", "mean_width", "residual_std"):
+        require(finite(data[name]) and data[name] >= 0)
+    require(math.isclose(data["mean_width"], 2 * data["half_width"]))
+    require(finite(data["mean_residual"]))
+    corr = data["abs_residual_prediction_correlation"]
+    require(corr is None or (finite(corr) and -1 <= corr <= 1))
+    require(data["importance_repeats"] == 10)
+    require([row["feature"] for row in data["importance"]] == list(DATA_COLUMNS[:-1]))
+    for row in data["importance"]:
+        require(finite(row["mean"]) and finite(row["std"]) and row["std"] >= 0)
+    require(len(data["intervals"]) == evaluation["test_count"])
+    hits = 0
+    for interval, prediction in zip(data["intervals"], evaluation["predictions"]):
+        require(interval["row_index"] == prediction["row_index"])
+        require(finite(interval["lower"]) and finite(interval["upper"]))
+        require(math.isclose(interval["lower"], prediction["predicted"] - data["half_width"], abs_tol=1e-9))
+        require(math.isclose(interval["upper"], prediction["predicted"] + data["half_width"], abs_tol=1e-9))
+        hit = interval["lower"] <= prediction["actual"] <= interval["upper"]
+        require(type(interval["covered"]) is bool and interval["covered"] == hit)
+        hits += hit
+    require(finite(data["empirical_coverage"]) and math.isclose(data["empirical_coverage"], hits / evaluation["test_count"]))
+    require(sum(row["count"] for row in data["residual_bins"]) == evaluation["test_count"])
+    for row in data["residual_bins"]:
+        require(type(row["count"]) is int and row["count"] > 0)
+        require(all(finite(row[name]) for name in ("lower", "upper", "mean_residual", "mae", "rmse")))
+        require(row["lower"] <= row["upper"] and row["mae"] >= 0 and row["rmse"] >= 0)
 
 
 def fetch_dataset(base_url: str, n_samples: int, seed: int, noise_std: float) -> dict:
