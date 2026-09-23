@@ -7,6 +7,7 @@ import streamlit as st
 from frontend.api_client import BackendError, MODEL_NAMES, fetch_comparison
 from frontend.model_trainer import render_evaluation
 from frontend.model_diagnostics import render_diagnostics
+from frontend.prediction_panel import render_prediction_panel
 
 
 def render_model_comparison(backend_url: str) -> None:
@@ -79,3 +80,4 @@ def render_model_comparison(backend_url: str) -> None:
     render_evaluation(evaluation)
     if analysis is not None:
         render_diagnostics(analysis, evaluation)
+    render_prediction_panel(backend_url, evaluation)

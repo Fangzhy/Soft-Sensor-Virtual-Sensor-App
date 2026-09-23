@@ -16,13 +16,13 @@ from frontend.model_comparison import render_model_comparison
 
 def main() -> None:
     """Render the learning dashboard and handle an explicit connection check."""
-    st.set_page_config(page_title="Sensor Fusion | Stage 5", page_icon="🔬", layout="wide")
+    st.set_page_config(page_title="Sensor Fusion | Stage 6", page_icon="🔬", layout="wide")
 
-    # Read configuration from the process environment; no API key is needed yet.
+    # Streamlit needs only the backend address; LLM credentials stay in FastAPI.
     backend_url = os.getenv("BACKEND_URL", "http://127.0.0.1:8000").strip().rstrip("/")
     with st.sidebar:
         st.title("Sensor Fusion")
-        st.caption("Stage 5 of 7 · Explainability and uncertainty")
+        st.caption("Stage 6 of 7 · Predict and explain")
         st.markdown("**Prediction target**\n\nSolid concentration (%)")
         st.divider()
         st.caption("Backend URL")

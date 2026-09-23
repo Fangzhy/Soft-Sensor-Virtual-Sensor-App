@@ -6,7 +6,7 @@ Here, ``backend.main`` identifies this module and ``app`` is the object below.
 
 from typing import Literal
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from backend.schemas import DatasetResponse, GenerationRequest, TrainingRequest, TrainingResponse
@@ -14,6 +14,9 @@ from backend.services.modeling import train_linear_regression
 from backend.schemas import ComparisonRequest, ComparisonResponse
 from backend.services.model_comparison import compare_models
 from backend.services.synthetic_data import generate_dataset
+from backend.schemas import RunRequest, PredictionRequest, PredictionResponse, ExplanationResponse
+from backend.services.inference import predict_observation
+from backend.services.explanations import explain_run
 
 
 class HealthResponse(BaseModel):
@@ -58,10 +61,28 @@ def create_dataset(settings: GenerationRequest) -> DatasetResponse:
 @app.post("/models/train", response_model=TrainingResponse, tags=["Models"])
 def train_model(request: TrainingRequest) -> TrainingResponse:
     """Evaluate Linear Regression on the submitted dataset's held-out rows."""
-    return train_linear_regression(request)
+    return train_linear_regression(request, persist=True)
 
 
 @app.post("/models/compare", response_model=ComparisonResponse, tags=["Models"])
 def compare_model_candidates(request: ComparisonRequest) -> ComparisonResponse:
     """Compare fixed presets using training-only CV and evaluate the winner."""
-    return compare_models(request)
+    return compare_models(request, persist=True)
+
+
+@app.post("/models/predict", response_model=PredictionResponse, tags=["Models"])
+def predict(request: PredictionRequest) -> PredictionResponse:
+    """Predict from a retained fitted model; never retrain on new inputs."""
+    try:
+        return predict_observation(request)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Model run unavailable. Train or compare again.") from None
+
+
+@app.post("/models/explain", response_model=ExplanationResponse, tags=["Models"])
+def explain(request: RunRequest) -> ExplanationResponse:
+    """Explain only evidence retained by the backend for the requested run."""
+    try:
+        return explain_run(request.run_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Model run unavailable. Train or compare again.") from None

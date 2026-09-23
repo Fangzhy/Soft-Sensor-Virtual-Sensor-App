@@ -117,6 +117,49 @@ def validate_evaluation(result: dict, rows: list[dict], test_fraction: float, sp
 MODEL_NAMES = ["Linear Regression", "Random Forest", "XGBoost", "Neural Network"]
 
 
+def fetch_run_action(base_url: str, action: str, run_id: str, inputs: dict | None = None) -> dict:
+    """Call an existing run without ever passing an LLM key through Streamlit."""
+    if action not in ("predict", "explain"):
+        raise BackendError("Unsupported model action.")
+    body = {"run_id": run_id}
+    if inputs is not None:
+        body["inputs"] = inputs
+    try:
+        response = requests.post(f"{base_url.rstrip('/')}/models/{action}", json=body, timeout=(5, 90))
+        if response.status_code == 404:
+            raise BackendError("This model run expired or the backend restarted. Train or compare again.")
+        if response.status_code == 422:
+            raise BackendError("Invalid sensor inputs or model run. Check the values and retrain if needed.")
+        response.raise_for_status()
+        data = response.json()
+        require(data["run_id"] == run_id)
+        if action == "predict":
+            require(data["model"] in MODEL_NAMES and data["inputs"] == inputs)
+            require(type(data["prediction"]) in (int, float) and math.isfinite(data["prediction"]))
+            require(isinstance(data["warnings"], list) and all(isinstance(w, str) for w in data["warnings"]))
+            if data["nominal_coverage"] is None:
+                require(data["lower"] is None and data["upper"] is None)
+            else:
+                require(data["nominal_coverage"] == 0.9)
+                require(all(type(data[n]) in (int, float) and math.isfinite(data[n]) for n in ("lower", "upper")))
+                require(data["lower"] <= data["prediction"] <= data["upper"])
+        else:
+            require(data["source"] in ("template", "openrouter"))
+            require(isinstance(data["text"], str) and bool(data["text"].strip()))
+            require(isinstance(data["evidence"], dict) and type(data["cached"]) is bool)
+            require(data["notice"] is None or isinstance(data["notice"], str))
+            require(data["model"] is None or isinstance(data["model"], str))
+        return data
+    except requests.Timeout as exc:
+        raise BackendError("Streamlit timed out waiting for FastAPI (90-second read limit). Check the backend terminal; an explanation may still be running.") from exc
+    except requests.exceptions.JSONDecodeError as exc:
+        raise BackendError("FastAPI returned invalid JSON, not a timeout. Check the backend terminal.") from exc
+    except requests.RequestException as exc:
+        raise BackendError("Could not complete the request to FastAPI. Check its connection and backend terminal.") from exc
+    except (ValueError, TypeError, KeyError) as exc:
+        raise BackendError("The model response was incomplete or invalid.") from exc
+
+
 def fetch_comparison(base_url: str, rows: list[dict], test_fraction: float, split_seed: int, models: list[str], include_diagnostics: bool = False) -> dict:
     """Run one comparison request; retain readable failures for the UI."""
     try:

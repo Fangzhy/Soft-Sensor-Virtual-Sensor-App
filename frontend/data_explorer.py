@@ -39,6 +39,8 @@ def render_data_explorer(backend_url: str) -> None:
                 # Evaluation belongs to one dataset; never show stale model scores.
                 st.session_state.pop("training_result", None)
                 st.session_state.pop("comparison_result", None)
+                for key in ("interactive_run", "new_prediction", "model_explanation"):
+                    st.session_state.pop(key, None)
 
     if "dataset" not in st.session_state:
         st.caption("Generate a dataset to view its measurements, distributions, and correlations.")
