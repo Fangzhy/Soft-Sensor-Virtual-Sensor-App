@@ -33,7 +33,11 @@ def render_model_trainer(backend_url: str) -> None:
     if "training_result" not in st.session_state:
         return
 
-    result = st.session_state["training_result"]
+    render_evaluation(st.session_state["training_result"])
+
+
+def render_evaluation(result: dict) -> None:
+    """Reuse held-out metrics and diagnostic plots for any model family."""
     st.caption(
         f"Displayed evaluation: {result['train_count']} training rows / {result['test_count']} test rows · "
         f"test fraction {result['test_fraction']:.0%} · split seed {result['split_seed']}"
@@ -48,8 +52,8 @@ def render_model_trainer(backend_url: str) -> None:
     st.caption("R² can be negative; it is undefined for a constant target. Lower RMSE and MAE are better.")
     with st.expander("Compare training, test, and a simple baseline"):
         st.dataframe(pd.DataFrame({
-            "Linear Regression — training": result["train_metrics"],
-            "Linear Regression — test": scores,
+            f"{result['model']} — training": result["train_metrics"],
+            f"{result['model']} — test": scores,
             "Training-mean baseline — test": result["baseline_test_metrics"],
         }).T.rename(columns={"r2": "R²", "rmse": "RMSE (pp)", "mae": "MAE (pp)"}))
         st.caption("The baseline predicts the training-set mean for every test row. Training scores describe fit, not unseen-data performance.")
@@ -77,4 +81,4 @@ def render_model_trainer(backend_url: str) -> None:
     st.caption("Predictions are not clipped to 0–100%, so errors reflect the fitted model's raw output.")
     with st.expander("Inspect held-out predictions"):
         st.dataframe(predictions.rename(columns=labels), hide_index=True)
-    st.info("This is a single holdout evaluation. Avoid choosing seeds for better scores; Stage 4 will add cross-validation for model comparison.")
+    st.info("Test scores estimate unseen-data performance. Use training cross-validation for model selection, and avoid choosing seeds for better test scores.")

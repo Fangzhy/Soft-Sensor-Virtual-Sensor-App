@@ -10,3 +10,5 @@ pandas>=2.2,<4.0
 plotly>=6.0,<7.0
 # Stage 3: preprocessing, splitting, Linear Regression, and evaluation.
 scikit-learn>=1.5,<2.0
+# Stage 4: gradient-boosted decision trees with a scikit-learn interface.
+xgboost>=2.1,<4.0

@@ -1,4 +1,4 @@
-"""Stage 1 API: expose a health check before adding data or model endpoints.
+"""FastAPI routes for health, synthetic data, training, and model comparison.
 
 Run from the project root with: python -m uvicorn backend.main:app --reload
 Here, ``backend.main`` identifies this module and ``app`` is the object below.
@@ -11,6 +11,8 @@ from pydantic import BaseModel
 
 from backend.schemas import DatasetResponse, GenerationRequest, TrainingRequest, TrainingResponse
 from backend.services.modeling import train_linear_regression
+from backend.schemas import ComparisonRequest, ComparisonResponse
+from backend.services.model_comparison import compare_models
 from backend.services.synthetic_data import generate_dataset
 
 
@@ -57,3 +59,9 @@ def create_dataset(settings: GenerationRequest) -> DatasetResponse:
 def train_model(request: TrainingRequest) -> TrainingResponse:
     """Evaluate Linear Regression on the submitted dataset's held-out rows."""
     return train_linear_regression(request)
+
+
+@app.post("/models/compare", response_model=ComparisonResponse, tags=["Models"])
+def compare_model_candidates(request: ComparisonRequest) -> ComparisonResponse:
+    """Compare fixed presets using training-only CV and evaluate the winner."""
+    return compare_models(request)

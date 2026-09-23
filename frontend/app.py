@@ -1,4 +1,4 @@
-"""Stage 1 Streamlit page: describe the demo and check the FastAPI connection.
+"""Streamlit entry point: connect, explore data, and choose a modeling workflow.
 
 Run from the project root with: python -m streamlit run frontend/app.py
 Streamlit re-executes this script when a user interacts with a widget.
@@ -11,17 +11,18 @@ import streamlit as st
 from frontend.api_client import BackendError, fetch_health
 from frontend.data_explorer import render_data_explorer
 from frontend.model_trainer import render_model_trainer
+from frontend.model_comparison import render_model_comparison
 
 
 def main() -> None:
     """Render the learning dashboard and handle an explicit connection check."""
-    st.set_page_config(page_title="Sensor Fusion | Stage 3", page_icon="🔬", layout="wide")
+    st.set_page_config(page_title="Sensor Fusion | Stage 5", page_icon="🔬", layout="wide")
 
     # Read configuration from the process environment; no API key is needed yet.
     backend_url = os.getenv("BACKEND_URL", "http://127.0.0.1:8000").strip().rstrip("/")
     with st.sidebar:
         st.title("Sensor Fusion")
-        st.caption("Stage 3 of 7 · Linear Regression")
+        st.caption("Stage 5 of 7 · Explainability and uncertainty")
         st.markdown("**Prediction target**\n\nSolid concentration (%)")
         st.divider()
         st.caption("Backend URL")
@@ -48,7 +49,7 @@ def main() -> None:
     with target:
         st.subheader("Prediction target")
         st.markdown("### Solid concentration (%)")
-        st.info("Target: mass percent (w/w). Train a linear model and evaluate held-out predictions below.")
+        st.info("Target: mass percent (w/w). Compare four model families using training-only cross-validation below.")
 
     st.divider()
     st.subheader("Check the backend connection")
@@ -81,7 +82,11 @@ def main() -> None:
     st.divider()
     render_data_explorer(backend_url)
     st.divider()
-    render_model_trainer(backend_url)
+    workflow = st.radio("Modeling workflow", ["Compare models", "Linear Regression walkthrough"])
+    if workflow == "Compare models":
+        render_model_comparison(backend_url)
+    else:
+        render_model_trainer(backend_url)
 
 
 if __name__ == "__main__":

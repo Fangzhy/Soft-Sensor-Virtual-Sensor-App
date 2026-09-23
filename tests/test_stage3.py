@@ -109,6 +109,7 @@ def test_training_ui_and_dataset_invalidation():
     path = Path(__file__).resolve().parents[1] / "frontend" / "app.py"
     with patch("frontend.api_client.requests.post") as post:
         page = AppTest.from_file(str(path), default_timeout=20).run()
+        page.radio[0].set_value("Linear Regression walkthrough").run()
         assert not any(button.label == "Train Linear Regression" for button in page.button)
         page.session_state["dataset"] = dataset
         page.run()

@@ -4,7 +4,7 @@ A step-by-step learning project using **FastAPI** for the backend and
 **Streamlit** for the frontend. The prediction target is **solid concentration
 (%)**, using temperature, density, flow rate, pressure, and agitation speed.
 
-## Current milestone: Stage 3
+## Current milestone: Stage 5
 
 The app generates reproducible synthetic sensor data through FastAPI and
 explores it in Streamlit. Choose 100–5000 rows, a random seed, and target noise;
@@ -12,8 +12,17 @@ inspect summaries, histograms, scatter plots, and correlations; download all
 rows as CSV. Solid concentration is mass percent (w/w).
 Train Linear Regression on the displayed data and inspect held-out R², RMSE,
 MAE, actual-versus-predicted and residual plots, plus a training-mean baseline.
-The Stage 1 health check is still available. Additional models, predictions for
-new inputs, and AI explanations are future stages. No company data or API key is required.
+Compare Linear Regression, Random Forest, XGBoost, and a neural network using
+five identical training-only folds. Select by mean CV RMSE and evaluate the
+selected model on held-out test rows. The Stage 1 health check and Stage 3
+walkthrough remain available. Predictions for new inputs and AI explanations
+are future stages. No company data or API key is required.
+
+Stage 5 adds permutation feature importance, residual summaries, and 90%
+split-conformal prediction intervals. The default comparison now uses 60%
+training, 20% calibration, and 20% test data. Calibration rows are excluded
+from fitting and model selection. Disable the Stage 5 checkbox to reproduce
+the earlier Stage 4 two-way split.
 
 ## Setup (Windows PowerShell)
 
@@ -82,7 +91,19 @@ For Stage 3, scroll to **Train and evaluate Linear Regression** after generating
 data, then click **Train Linear Regression**. The default split is 80% training
 and 20% test. See the [Stage 3 walkthrough](docs/stage-3.md) for metrics and
 leakage prevention. Install updated dependencies and restart servers when
-moving from Stage 2.
+moving from an earlier stage. Select **Linear Regression walkthrough** to use
+the original Stage 3 form.
+
+For Stage 4, choose **Compare models**, select candidates, and click **Compare
+selected models**. The leaderboard and fold chart show validation performance;
+the test plots below belong to the CV-selected model. See the
+[Stage 4 walkthrough](docs/stage-4.md) for model presets, cross-validation,
+optimizer notices, and exercises. XGBoost requires the updated dependencies.
+
+For Stage 5, leave **Include Stage 5 diagnostics and 90% intervals** checked,
+run the comparison, and inspect **Explainability and uncertainty** below the
+test plots. Read the [Stage 5 walkthrough](docs/stage-5.md) for calibration,
+coverage assumptions, feature-importance interpretation, and exercises.
 
 ### Optional backend address
 
@@ -118,6 +139,14 @@ This stage reads the process environment directly; it does not load `.env` files
 | `frontend/model_trainer.py` | Training form and evaluation plots. |
 | `tests/test_stage3.py` | Metric correctness, leakage checks, validation, and UI lifecycle. |
 | `docs/stage-3.md` | Linear Regression, split strategy, metrics, and exercises. |
+| `backend/services/model_comparison.py` | Four model presets, shared training folds, and CV selection. |
+| `frontend/model_comparison.py` | Candidate selection, leaderboard, fold chart, and selected-model evaluation. |
+| `tests/test_stage4.py` | Model-family, fold isolation, warning, and UI lifecycle checks. |
+| `docs/stage-4.md` | Cross-validation, hyperparameters, comparison interpretation, and exercises. |
+| `backend/services/diagnostics.py` | Conformal calibration, permutation importance, and residual statistics. |
+| `frontend/model_diagnostics.py` | Feature importance, residual diagnostics, and interval visualization. |
+| `tests/test_stage5.py` | Calibration isolation, finite-sample ranks, coverage, and UI checks. |
+| `docs/stage-5.md` | Interpretation, assumptions, and hands-on exercises. |
 
 The dependency ranges allow compatible updates; they are not an exact lockfile.
 The existing `.gitignore` excludes the virtual environment and local secrets.
@@ -146,9 +175,9 @@ required. Try the two-terminal workflow above to verify the actual HTTP link.
 
 1. App foundation (complete).
 2. Reproducible synthetic sensor data and exploration (complete).
-3. Linear Regression and evaluation charts (this milestone).
-4. Random Forest, XGBoost, neural network, and cross-validation.
-5. Feature importance, residual diagnostics, and prediction intervals.
+3. Linear Regression and evaluation charts (complete).
+4. Random Forest, XGBoost, neural network, and cross-validation (complete).
+5. Feature importance, residual diagnostics, and prediction intervals (this milestone).
 6. Interactive prediction and evidence-based AI explanations.
 7. Portfolio polish, exports, and final validation.
 
