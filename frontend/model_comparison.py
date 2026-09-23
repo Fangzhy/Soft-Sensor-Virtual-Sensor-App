@@ -81,3 +81,5 @@ def render_model_comparison(backend_url: str) -> None:
     if analysis is not None:
         render_diagnostics(analysis, evaluation)
     render_prediction_panel(backend_url, evaluation)
+    from frontend.exports import render_exports
+    render_exports(st.session_state["dataset"], evaluation, result)

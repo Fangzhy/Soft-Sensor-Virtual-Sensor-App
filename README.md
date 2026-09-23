@@ -1,12 +1,14 @@
 # SensorData-FusionPredtionExplaination
 
+[Launch live demo](https://sensor-fusion-lab.streamlit.app) | [Cloud deployment guide](docs/deployment.md)
+
 A step-by-step learning project using **FastAPI** for the backend and
 **Streamlit** for the frontend. The prediction target is **solid concentration
 (%)**, using temperature, density, flow rate, pressure, and agitation speed.
 
-## Current milestone: Stage 6
+## Complete portfolio demo ? all seven stages
 
-The app generates reproducible synthetic sensor data through FastAPI and
+The app generates reproducible synthetic sensor data through shared backend services and
 explores it in Streamlit. Choose 100–5000 rows, a random seed, and target noise;
 inspect summaries, histograms, scatter plots, and correlations; download all
 rows as CSV. Solid concentration is mass percent (w/w).
@@ -17,7 +19,7 @@ five identical training-only folds. Select by mean CV RMSE and evaluate the
 selected model on held-out test rows. The Stage 1 health check and Stage 3
 walkthrough remain available. Predict new sensor observations with a retained
 model, and request an AI explanation through a pinned free OpenRouter model. The
-backend reads `OPENROUTER_API_KEY` from the root `.env`; without it, a labeled
+server reads `OPENROUTER_API_KEY` from Cloud secrets or the local root `.env`; without it, a labeled
 local explanation is available. No company data is required.
 
 Stage 5 adds permutation feature importance, residual summaries, and 90%
@@ -25,6 +27,15 @@ split-conformal prediction intervals. The default comparison now uses 60%
 training, 20% calibration, and 20% test data. Calibration rows are excluded
 from fitting and model selection. Disable the Stage 5 checkbox to reproduce
 the earlier Stage 4 two-way split.
+
+## Community Cloud deployment
+
+Cloud mode runs the existing backend services inside Streamlit; local mode
+retains the separate FastAPI server. Set `APP_EXECUTION_MODE = "direct"` in
+Streamlit's private Secrets settings, alongside the OpenRouter key and model.
+Deploy `frontend/app.py` from `main` with Python 3.12. Development stays on `dev`;
+merge through a pull request to release. See the [deployment walkthrough](docs/deployment.md)
+for configuration, testing, model availability, and GitHub website settings.
 
 ## Setup (Windows PowerShell)
 
@@ -166,7 +177,8 @@ backend loads OpenRouter settings from the repository-root `.env` (not
 | `tests/test_stage6.py` | Inference, expiry, secret handling, free-only routing, and UI tests. |
 | `docs/stage-6.md` | Configuration, request flow, limitations, and exercises. |
 
-The dependency ranges allow compatible updates; they are not an exact lockfile.
+The readable dependency ranges allow compatible updates. `requirements-lock.txt`
+records the tested Python 3.12 Windows environment, including test tools.
 The existing `.gitignore` excludes the virtual environment and local secrets.
 
 ## Verify
@@ -196,8 +208,19 @@ required. Try the two-terminal workflow above to verify the actual HTTP link.
 3. Linear Regression and evaluation charts (complete).
 4. Random Forest, XGBoost, neural network, and cross-validation (complete).
 5. Feature importance, residual diagnostics, and prediction intervals (complete).
-6. Interactive prediction and evidence-based AI explanations (this milestone).
-7. Portfolio polish, exports, and final validation.
+6. Interactive prediction and evidence-based AI explanations (complete).
+7. Portfolio polish, exports, and final validation (complete).
 
 Continue with the [Stage 1 walkthrough](docs/stage-1.md).
 Then work through the [Stage 2 walkthrough](docs/stage-2.md).
+
+## Portfolio walkthrough and exports
+
+Use **Save your results ? Prepare evaluation report** after training/comparison
+to download a ZIP of synthetic data, metrics, predictions, CV results, and
+available diagnostics, or a standalone Markdown summary. No API call is made
+when preparing a report.
+
+See the [Stage 7 demo guide](docs/stage-7.md) and
+[architecture diagram](docs/architecture.md) for a presentation script, export
+contents, reproducibility notes, and local-demo limitations.

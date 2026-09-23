@@ -1,4 +1,4 @@
-"""Read secrets only on the backend, independently of the working directory."""
+"""Read server-side secrets, independently of the working directory."""
 
 import os
 from pathlib import Path
@@ -14,7 +14,7 @@ def openrouter_settings() -> tuple[str, str]:
     """Process environment overrides the explicit root .env, never docs/.env.
 
     Read at request time so a corrected key can be used without printing it or
-    copying it into Streamlit. Disable interpolation of unrelated env values.
+    exposing it to the browser. Cloud root-level secrets use the environment. Disable interpolation of unrelated env values.
     """
     values = dotenv_values(Path(__file__).resolve().parents[1] / ".env", interpolate=False)
     # Preserve the user's existing OPEN_ROUTER_API setting as a supported alias.

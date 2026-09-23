@@ -1,7 +1,8 @@
 """Small, thread-safe, process-local store for fitted demo models.
 
 Random run IDs act as capabilities: keep them in their originating session.
-This is for a local single-worker demo, not authenticated multi-user hosting.
+HTTP mode uses these as capabilities. The cloud adapter additionally checks
+browser-session ownership. Neither mode provides durable authenticated accounts.
 """
 
 from collections import OrderedDict
