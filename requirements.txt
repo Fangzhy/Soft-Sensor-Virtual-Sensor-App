@@ -12,3 +12,5 @@ plotly>=6.0,<7.0
 scikit-learn>=1.5,<2.0
 # Stage 4: gradient-boosted decision trees with a scikit-learn interface.
 xgboost>=2.1,<4.0
+# Stage 6: explicitly load backend-only settings from the root .env.
+python-dotenv>=1.0,<2.0

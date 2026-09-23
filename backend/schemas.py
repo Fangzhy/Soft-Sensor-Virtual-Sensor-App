@@ -72,6 +72,7 @@ class TrainingResponse(BaseModel):
     """Evaluation artifacts, not a serialized executable model."""
 
     model: ModelName = "Linear Regression"
+    run_id: str | None = None
     train_count: int
     test_count: int
     test_fraction: float
@@ -162,3 +163,47 @@ class ComparisonResponse(BaseModel):
     evaluation: TrainingResponse
     warnings: list[str]
     diagnostics: ModelDiagnostics | None = None
+
+
+class RunRequest(BaseModel):
+    """The backend retrieves evidence; clients cannot supply invented metrics."""
+
+    model_config = ConfigDict(extra="forbid")
+    run_id: str = Field(pattern=r"^[a-f0-9]{32}$")
+
+
+class SensorInputs(BaseModel):
+    """One observation within demo operating limits, without a target column."""
+
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+    temperature_c: float = Field(ge=20, le=90)
+    density_kg_m3: float = Field(ge=1000, le=1300)
+    flow_rate_l_min: float = Field(ge=10, le=100)
+    pressure_bar: float = Field(ge=1, le=6)
+    agitation_rpm: float = Field(ge=100, le=800)
+
+
+class PredictionRequest(RunRequest):
+    inputs: SensorInputs
+
+
+class PredictionResponse(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+    run_id: str
+    model: ModelName
+    inputs: SensorInputs
+    prediction: float
+    lower: float | None
+    upper: float | None
+    nominal_coverage: float | None
+    warnings: list[str]
+
+
+class ExplanationResponse(BaseModel):
+    run_id: str
+    source: Literal["openrouter", "template"]
+    model: str | None
+    text: str
+    evidence: dict
+    notice: str | None = None
+    cached: bool = False

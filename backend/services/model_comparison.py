@@ -74,7 +74,7 @@ def summarize_folds(scores: list[RegressionMetrics], use_std: bool = False) -> R
     })
 
 
-def compare_models(request: ComparisonRequest) -> ComparisonResponse:
+def compare_models(request: ComparisonRequest, persist: bool = False) -> ComparisonResponse:
     """Rank by training CV RMSE, then refit and test only the selected model.
 
     The outer test rows never appear in a CV fold. Precomputing folds once
@@ -127,10 +127,14 @@ def compare_models(request: ComparisonRequest) -> ComparisonResponse:
             residual=float(y[index] - value),
         ) for index, value in zip(test_idx, predicted)],
     )
-    return ComparisonResponse(
+    result = ComparisonResponse(
         results=results, selected_model=winner, evaluation=evaluation, warnings=final_notices,
         diagnostics=None if calibration_idx is None else inspect_model(
             final_model, x[calibration_idx], y[calibration_idx],
             x[test_idx], y[test_idx], test_idx, request.split_seed,
         ),
     )
+    if persist:
+        from backend.services.run_store import retain_run
+        result.evaluation.run_id = retain_run(final_model, x_train, FEATURES, evaluation, result)
+    return result

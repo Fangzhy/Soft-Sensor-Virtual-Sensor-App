@@ -4,7 +4,7 @@ A step-by-step learning project using **FastAPI** for the backend and
 **Streamlit** for the frontend. The prediction target is **solid concentration
 (%)**, using temperature, density, flow rate, pressure, and agitation speed.
 
-## Current milestone: Stage 5
+## Current milestone: Stage 6
 
 The app generates reproducible synthetic sensor data through FastAPI and
 explores it in Streamlit. Choose 100–5000 rows, a random seed, and target noise;
@@ -15,8 +15,10 @@ MAE, actual-versus-predicted and residual plots, plus a training-mean baseline.
 Compare Linear Regression, Random Forest, XGBoost, and a neural network using
 five identical training-only folds. Select by mean CV RMSE and evaluate the
 selected model on held-out test rows. The Stage 1 health check and Stage 3
-walkthrough remain available. Predictions for new inputs and AI explanations
-are future stages. No company data or API key is required.
+walkthrough remain available. Predict new sensor observations with a retained
+model, and request an AI explanation through a pinned free OpenRouter model. The
+backend reads `OPENROUTER_API_KEY` from the root `.env`; without it, a labeled
+local explanation is available. No company data is required.
 
 Stage 5 adds permutation feature importance, residual summaries, and 90%
 split-conformal prediction intervals. The default comparison now uses 60%
@@ -105,6 +107,13 @@ run the comparison, and inspect **Explainability and uncertainty** below the
 test plots. Read the [Stage 5 walkthrough](docs/stage-5.md) for calibration,
 coverage assumptions, feature-importance interpretation, and exercises.
 
+For Stage 6, train or compare again, then use **Predict and explain**. Predictions
+reuse the fitted model; **Explain this model** sends only a compact evidence
+summary to `nex-agi/nex-n2.5-mini:free` on click. Configure the key as shown in
+[.env.example](.env.example) and read the [Stage 6 walkthrough](docs/stage-6.md).
+Runs expire after one hour, at store capacity, or on backend restart. Use one
+backend worker for this local demo.
+
 ### Optional backend address
 
 If you run FastAPI on a different port, set the matching URL in the frontend
@@ -115,7 +124,9 @@ $env:BACKEND_URL = 'http://127.0.0.1:8001'
 .\.venv\Scripts\python.exe -m streamlit run frontend/app.py
 ```
 
-This stage reads the process environment directly; it does not load `.env` files.
+The frontend reads `BACKEND_URL` from its process environment. Separately, the
+backend loads OpenRouter settings from the repository-root `.env` (not
+`docs/.env`), with process environment variables taking precedence.
 
 ## How the files fit together
 
@@ -147,6 +158,13 @@ This stage reads the process environment directly; it does not load `.env` files
 | `frontend/model_diagnostics.py` | Feature importance, residual diagnostics, and interval visualization. |
 | `tests/test_stage5.py` | Calibration isolation, finite-sample ranks, coverage, and UI checks. |
 | `docs/stage-5.md` | Interpretation, assumptions, and hands-on exercises. |
+| `backend/config.py` | Backend-only OpenRouter configuration from root `.env`. |
+| `backend/services/run_store.py` | Expiring model retention and compact evidence. |
+| `backend/services/inference.py` | New-observation predictions with existing models/intervals. |
+| `backend/services/explanations.py` | Free OpenRouter request, cache, and local fallback. |
+| `frontend/prediction_panel.py` | Sensor-input form and explanation/evidence display. |
+| `tests/test_stage6.py` | Inference, expiry, secret handling, free-only routing, and UI tests. |
+| `docs/stage-6.md` | Configuration, request flow, limitations, and exercises. |
 
 The dependency ranges allow compatible updates; they are not an exact lockfile.
 The existing `.gitignore` excludes the virtual environment and local secrets.
@@ -177,8 +195,8 @@ required. Try the two-terminal workflow above to verify the actual HTTP link.
 2. Reproducible synthetic sensor data and exploration (complete).
 3. Linear Regression and evaluation charts (complete).
 4. Random Forest, XGBoost, neural network, and cross-validation (complete).
-5. Feature importance, residual diagnostics, and prediction intervals (this milestone).
-6. Interactive prediction and evidence-based AI explanations.
+5. Feature importance, residual diagnostics, and prediction intervals (complete).
+6. Interactive prediction and evidence-based AI explanations (this milestone).
 7. Portfolio polish, exports, and final validation.
 
 Continue with the [Stage 1 walkthrough](docs/stage-1.md).

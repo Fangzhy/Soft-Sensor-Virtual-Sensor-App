@@ -34,6 +34,8 @@ def render_model_trainer(backend_url: str) -> None:
         return
 
     render_evaluation(st.session_state["training_result"])
+    from frontend.prediction_panel import render_prediction_panel
+    render_prediction_panel(backend_url, st.session_state["training_result"])
 
 
 def render_evaluation(result: dict) -> None:
